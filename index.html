@@ -195,7 +195,7 @@ function buildOverview(){
      '<ul>'+ins.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
   h+='<div style="height:18px"></div>';
   h+='<div class="grid row2">';
-  h+=chartCard('🏫 School: EASE 1 vs EASE 2','Same 6 schools, Grades 4–5 only','c_ov_sch',true);
+  h+=chartCard('🏫 School: EASE 1 vs EASE 2','All 8 schools, Grades 4–5. Fatih &amp; TNA: EASE 2 only (no EASE 1 baseline).','c_ov_sch',true);
   h+=chartCard('📚 Subject: EASE 1 vs EASE 2','Same cohort, Grades 4–5 only','c_ov_sub',true);
   h+='</div><div style="height:18px"></div>';
   // delta table
@@ -206,10 +206,14 @@ function buildOverview(){
   h+='</tbody></table></div>';
   h+='<div style="height:18px"></div>';
   // school delta table
-  h+='<div class="card"><h3>📋 School Movement (fair cohort)</h3><div class="cap">Overall change, EASE 1 → EASE 2 (Grades 4–5).</div>'+
+  // schools that joined only in EASE 2 (no EASE 1 baseline)
+  const newcomers=DB.raw['EASE 2'].schools.filter(s=>!(s in C.schools) && m2.school_overall[s]);
+  h+='<div class="card"><h3>📋 School Movement</h3><div class="cap">Overall change, EASE 1 → EASE 2 (Grades 4–5). Fatih Bilingual &amp; TNA Fatih were not assessed in EASE 1, so they appear as new entrants (EASE 2 only).</div>'+
      '<table><thead><tr><th class="school">School</th><th>EASE 1</th><th>EASE 2</th><th>Change</th></tr></thead><tbody>';
   Object.entries(C.schools).sort((a,b)=>b[1].delta-a[1].delta).forEach(([s,v])=>{const up=v.delta>=0;
     h+=`<tr><td class="school">${s}</td><td>${v.e1}</td><td>${v.e2}</td><td><span class="badge ${up?'up':'down'}">${up?'▲ +':'▼ '}${v.delta}</span></td></tr>`;});
+  newcomers.sort((a,b)=>m2.school_overall[b]-m2.school_overall[a]).forEach(s=>{
+    h+=`<tr><td class="school">${s}</td><td class="na">—</td><td>${m2.school_overall[s]}</td><td><span class="badge" style="background:rgba(91,140,255,.18);color:#5b8cff">★ NEW</span></td></tr>`;});
   h+='</tbody></table></div>';
   h+='<div class="foot"><b>Methodology &amp; notes.</b> Cell scores are school "Quality Report" averages from the source workbooks. Cohort/subject/grade aggregates are weighted by the number of participating students. '+
      'Zero values denote non-participation (not a score of 0) and are excluded from every average. EASE 1 covers Grades 4–6; EASE 2 covers Grades 4–5. '+
@@ -217,11 +221,14 @@ function buildOverview(){
      'Student counts are estimated as the largest subject participation per school-grade (a cohort proxy, since per-student records are not in the source).</div>';
   el.innerHTML=h;
 
-  const sc=Object.entries(C.schools).sort((a,b)=>b[1].e2-a[1].e2);
+  const scRows=Object.entries(C.schools).map(([s,v])=>({s,e1:v.e1,e2:v.e2}))
+    .concat(DB.raw['EASE 2'].schools.filter(s=>!(s in C.schools) && m2.school_overall[s])
+      .map(s=>({s,e1:null,e2:m2.school_overall[s]})))
+    .sort((a,b)=>b.e2-a.e2);
   mkChart(('c_ov_sch'),{type:'bar',
-    data:{labels:sc.map(e=>e[0].replace('Pribadi ','P. ').replace(' School','')),
-      datasets:[{label:'EASE 1',data:sc.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
-                {label:'EASE 2',data:sc.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
+    data:{labels:scRows.map(r=>r.s.replace('Pribadi ','P. ').replace(' School','').replace(' Bilingual','')),
+      datasets:[{label:'EASE 1',data:scRows.map(r=>r.e1),backgroundColor:PAL[0],borderRadius:5},
+                {label:'EASE 2',data:scRows.map(r=>r.e2),backgroundColor:PAL[1],borderRadius:5}]},
     options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:90,title:{display:true,text:'Average'}}}}});
   const su=Object.entries(C.subjects);
   mkChart(('c_ov_sub'),{type:'bar',
