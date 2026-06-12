@@ -176,6 +176,21 @@ function buildEase(ease,pid){
 }
 
 // ---------- Overview / Comparison ----------
+function wmeanJS(pairs){ // [[avg,part],...] participation-weighted, zeros excluded
+  pairs=pairs.filter(p=>p[0]>0 && p[1]>0);
+  if(!pairs.length) return null;
+  const tot=pairs.reduce((s,p)=>s+p[1],0);
+  return tot? Math.round(pairs.reduce((s,p)=>s+p[0]*p[1],0)/tot*100)/100 : null;
+}
+function gradeAvg(ease,grade,schools){ // weighted avg across all subjects for one grade
+  if(!DB.raw[ease].grades.includes(grade)) return null;
+  const d=DB.raw[ease].data, pairs=[];
+  DB.subjects.forEach(sub=>schools.forEach(sc=>{
+    const r=d[sub][sc] && d[sub][sc][grade];
+    if(r && r.avg>0) pairs.push([r.avg,r.part]);
+  }));
+  return wmeanJS(pairs);
+}
 function buildOverview(){
   const C=DB.comparison, m1=DB.metrics['EASE 1'], m2=DB.metrics['EASE 2'];
   const el=document.getElementById('page-overview');
@@ -205,6 +220,27 @@ function buildOverview(){
     h+=`<tr><td class="school">${s}</td><td>${v.e1}</td><td>${v.e2}</td><td><span class="badge ${up?'up':'down'}">${up?'▲ +':'▼ '}${v.delta}</span></td></tr>`;});
   h+='</tbody></table></div>';
   h+='<div style="height:18px"></div>';
+  // ---- grade-level movement (fair cohort) ----
+  const cohort=C.active_both; // 6 schools present in both rounds
+  const gradeRows=[
+    {g:'Grade 4', e1:gradeAvg('EASE 1','Grade 4',cohort), e2:gradeAvg('EASE 2','Grade 4',cohort)},
+    {g:'Grade 5', e1:gradeAvg('EASE 1','Grade 5',cohort), e2:gradeAvg('EASE 2','Grade 5',cohort)},
+    {g:'Grade 6', e1:gradeAvg('EASE 1','Grade 6',cohort), e2:null},
+  ];
+  h+='<div class="grid row3">';
+  h+=chartCard('🎓 Grade Level: EASE 1 vs EASE 2','Weighted average by grade, fair cohort. Grade 6 is EASE 1 only.','c_ov_grd',true);
+  h+='<div class="card"><h3>📋 Grade Movement</h3><div class="cap">Change in weighted average, EASE 1 → EASE 2 (6 schools in both rounds).</div>'+
+     '<table><thead><tr><th class="school">Grade</th><th>EASE 1</th><th>EASE 2</th><th>Change</th></tr></thead><tbody>';
+  gradeRows.forEach(r=>{
+    let chg;
+    if(r.e1!=null && r.e2!=null){const d=Math.round((r.e2-r.e1)*100)/100,up=d>=0;
+      chg=`<span class="badge ${up?'up':'down'}">${up?'▲ +':'▼ '}${d}</span>`;}
+    else if(r.e2==null){chg='<span class="badge" style="background:rgba(154,167,194,.18);color:#9aa7c2">EASE 1 only</span>';}
+    else {chg='<span class="badge" style="background:rgba(91,140,255,.18);color:#5b8cff">★ NEW</span>';}
+    h+=`<tr><td class="school">${r.g}</td><td>${r.e1!=null?r.e1:'<span class=na>—</span>'}</td><td>${r.e2!=null?r.e2:'<span class=na>—</span>'}</td><td>${chg}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  h+='</div><div style="height:18px"></div>';
   // school delta table
   // schools that joined only in EASE 2 (no EASE 1 baseline)
   const newcomers=DB.raw['EASE 2'].schools.filter(s=>!(s in C.schools) && m2.school_overall[s]);
@@ -236,6 +272,11 @@ function buildOverview(){
       datasets:[{label:'EASE 1',data:su.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
                 {label:'EASE 2',data:su.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
     options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:92,title:{display:true,text:'Average'}}}}});
+  mkChart(('c_ov_grd'),{type:'bar',
+    data:{labels:gradeRows.map(r=>r.g),
+      datasets:[{label:'EASE 1',data:gradeRows.map(r=>r.e1),backgroundColor:PAL[0],borderRadius:5},
+                {label:'EASE 2',data:gradeRows.map(r=>r.e2),backgroundColor:PAL[1],borderRadius:5}]},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:90,title:{display:true,text:'Average'}}}}});
 }
 
 function safe(fn,label){ try{ fn(); }catch(e){ console.error('build '+label,e); } }
