@@ -52,18 +52,81 @@ td.school,th.school{text-align:left;font-weight:600;white-space:nowrap}
 .foot{color:var(--mut);font-size:12px;margin-top:26px;line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
 .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--mut);margin:0 6px 6px 0}
 h2.section{font-size:16px;margin:26px 0 4px;color:var(--txt)}
+
+/* ---------- Hero landing ---------- */
+#hero{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:40px 24px;overflow:auto;
+  background:radial-gradient(1100px 560px at 50% -8%, #1c2c57 0%, rgba(16,22,40,0) 60%), linear-gradient(180deg,#0b1020,#0c111c);}
+#hero.hide{display:none}
+.hero-inner{max-width:880px;animation:heroIn .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes heroIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.hero-pill{display:inline-block;padding:8px 18px;border-radius:30px;border:1px solid rgba(146,170,220,.35);
+  background:rgba(255,255,255,.04);color:#c3cfe8;font-size:12.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase}
+.hero-title{margin:26px 0 0;font-size:clamp(44px,7vw,92px);line-height:1.02;font-weight:800;letter-spacing:-1.5px;
+  background:linear-gradient(180deg,#ffffff 0%,#dfe7ff 45%,#a6e9d6 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-sub{margin:24px auto 0;max-width:620px;color:#aab6d4;font-size:clamp(15px,1.6vw,19px);line-height:1.55}
+.hero-stats{display:flex;justify-content:center;gap:clamp(28px,6vw,72px);margin:42px 0 0;flex-wrap:wrap}
+.hero-stats .n{font-size:clamp(26px,3.4vw,38px);font-weight:800;color:#fff;line-height:1}
+.hero-stats .l{margin-top:8px;font-size:13px;color:#9aa7c2;letter-spacing:.3px}
+.hero-cta{position:relative;display:inline-block;margin-top:46px}
+.cta{border:none;cursor:pointer;padding:16px 30px;border-radius:40px;font-size:16px;font-weight:800;color:#0a1326;
+  background:linear-gradient(90deg,#5b8cff,#4dd0e1 55%,#38d39f);
+  box-shadow:0 10px 40px rgba(77,140,230,.45),0 0 0 1px rgba(255,255,255,.08) inset;transition:transform .15s,box-shadow .2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 16px 50px rgba(77,140,230,.6)}
+.cta .chev{display:inline-block;margin-left:8px;transition:transform .2s}
+.hero-cta.open .cta .chev{transform:rotate(180deg)}
+.menu{position:absolute;left:50%;transform:translateX(-50%) translateY(8px);top:100%;min-width:280px;
+  background:#141b2c;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5);
+  padding:8px;opacity:0;pointer-events:none;transition:.18s;z-index:5}
+.hero-cta.open .menu{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(12px)}
+.menu .mi{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;cursor:pointer;
+  color:#dbe3f4;font-weight:600;font-size:15px;text-align:left;transition:background .12s}
+.menu .mi:hover{background:#1d2740}
+.menu .mi .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.menu .mi small{display:block;color:#8694b4;font-weight:400;font-size:12px;margin-top:2px}
+.home-link{cursor:pointer}
+#app{display:none}
+#app.show{display:block}
+.backhome{display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:var(--mut);font-size:12.5px;cursor:pointer}
+.backhome:hover{color:var(--txt)}
 </style>
 </head>
 <body>
+
+<div id="hero">
+  <div class="hero-inner">
+    <span class="hero-pill">Exam Results · 2025–2026</span>
+    <h1 class="hero-title">Primary EASE<br>Dashboard</h1>
+    <p class="hero-sub">A clear overview of how students performed across schools, subjects, and grade levels in the Primary EASE 1 &amp; EASE 2 final exams. Choose a report to explore.</p>
+    <div class="hero-stats">
+      <div><div class="n" id="hs-results">—</div><div class="l">Exam results</div></div>
+      <div><div class="n" id="hs-avg">—</div><div class="l">Average score</div></div>
+      <div><div class="n" id="hs-schools">—</div><div class="l">Schools</div></div>
+      <div><div class="n" id="hs-subjects">—</div><div class="l">Subjects</div></div>
+    </div>
+    <div class="hero-cta" id="heroCta">
+      <button class="cta" id="reportBtn">Choose a Report <span class="chev">▾</span></button>
+      <div class="menu" id="reportMenu">
+        <div class="mi" data-tab="overview"><span class="ic" style="background:rgba(91,140,255,.18)">🔁</span><div>Overview &amp; Comparison<small>EASE 1 vs EASE 2, by subject, grade &amp; school</small></div></div>
+        <div class="mi" data-tab="ease1"><span class="ic" style="background:rgba(56,211,159,.18)">📘</span><div>EASE 1 Report<small>Grades 4–6 · 6 schools</small></div></div>
+        <div class="mi" data-tab="ease2"><span class="ic" style="background:rgba(255,209,102,.18)">📗</span><div>EASE 2 Report<small>Grades 4–5 · 8 schools</small></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="app">
 <header>
-  <h1>📊 Primary EASE 2025/2026 — Final Exam Results Dashboard</h1>
-  <div class="sub">Quality-report averages &amp; participation across 8 partner schools · EASE 1 (Grades 4–6) &amp; EASE 2 (Grades 4–5) · Scores are participation-weighted; non-participating entries excluded.</div>
+  <h1 class="home-link" id="homeLink">📊 Primary EASE 2025/2026 — Final Exam Results Dashboard</h1>
+  <div class="sub">Quality-report averages &amp; participation across 8 partner schools · EASE 1 (Grades 4–6) &amp; EASE 2 (Grades 4–5) · Scores are participation-weighted; non-participating entries excluded. <span class="backhome" id="backHome">← Back to home</span></div>
 </header>
 <div class="tabs" id="tabs"></div>
 <div class="wrap">
   <div class="page" id="page-overview"></div>
   <div class="page" id="page-ease1"></div>
   <div class="page" id="page-ease2"></div>
+</div>
 </div>
 
 <script>
@@ -95,11 +158,13 @@ function rank(o){return Object.entries(o).filter(e=>e[1]).sort((a,b)=>b[1]-a[1])
 // ---------- Tabs ----------
 const tabsDef=[['overview','Overview &amp; Comparison'],['ease1','EASE 1'],['ease2','EASE 2']];
 const tabsEl=document.getElementById('tabs');
-tabsDef.forEach(([id,lbl],i)=>{
-  const t=document.createElement('div');t.className='tab'+(i===0?' active':'');t.innerHTML=lbl;
-  t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');document.getElementById('page-'+id).classList.add('active');};
+function activateTab(id){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab===id));
+  document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active', x.id==='page-'+id));
+}
+tabsDef.forEach(([id,lbl])=>{
+  const t=document.createElement('div');t.className='tab';t.dataset.tab=id;t.innerHTML=lbl;
+  t.onclick=()=>activateTab(id);
   tabsEl.appendChild(t);
 });
 
@@ -283,6 +348,37 @@ function safe(fn,label){ try{ fn(); }catch(e){ console.error('build '+label,e); 
 safe(buildOverview,'overview');
 safe(()=>buildEase('EASE 1','page-ease1'),'ease1');
 safe(()=>buildEase('EASE 2','page-ease2'),'ease2');
-document.getElementById('page-overview').classList.add('active');
+activateTab('overview');
+
+// ---------- Hero landing ----------
+(function(){
+  const m1=DB.metrics['EASE 1'], m2=DB.metrics['EASE 2'];
+  const ts=m1.total_sittings+m2.total_sittings;
+  const combined=Math.round((m1.overall*m1.total_sittings+m2.overall*m2.total_sittings)/ts*10)/10;
+  document.getElementById('hs-results').textContent=ts.toLocaleString();
+  document.getElementById('hs-avg').textContent=combined.toFixed(1);
+  document.getElementById('hs-schools').textContent=DB.raw['EASE 2'].schools.length;
+  document.getElementById('hs-subjects').textContent=DB.subjects.length;
+
+  const hero=document.getElementById('hero'), app=document.getElementById('app');
+  const cta=document.getElementById('heroCta');
+  function showReport(tab){
+    activateTab(tab);
+    hero.classList.add('hide');
+    app.classList.add('show');
+    cta.classList.remove('open');
+    window.scrollTo(0,0);
+  }
+  function showHero(){
+    app.classList.remove('show');
+    hero.classList.remove('hide');
+    window.scrollTo(0,0);
+  }
+  document.getElementById('reportBtn').onclick=e=>{e.stopPropagation();cta.classList.toggle('open');};
+  document.querySelectorAll('#reportMenu .mi').forEach(mi=>mi.onclick=()=>showReport(mi.dataset.tab));
+  document.addEventListener('click',e=>{if(!cta.contains(e.target))cta.classList.remove('open');});
+  document.getElementById('homeLink').onclick=showHero;
+  document.getElementById('backHome').onclick=showHero;
+})();
 </script>
 </body></html>
