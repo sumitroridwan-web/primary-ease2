@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Primary EASE 2025/2026 — Final Exam Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1420; --panel:#171e2e; --panel2:#1d263a; --line:#2a3550;
+  --txt:#e8edf7; --mut:#9aa7c2; --accent:#5b8cff; --accent2:#38d39f;
+  --warn:#ff6b6b; --gold:#ffd166; --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:linear-gradient(160deg,#0c111c,#11182a 60%,#0c111c);color:var(--txt);}
+header{padding:26px 30px 14px;border-bottom:1px solid var(--line);
+  background:rgba(20,26,42,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20}
+header h1{margin:0;font-size:22px;letter-spacing:.3px}
+header .sub{color:var(--mut);font-size:13px;margin-top:4px}
+.tabs{display:flex;gap:8px;padding:14px 30px 0;flex-wrap:wrap}
+.tab{padding:10px 18px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;
+  background:var(--panel);color:var(--mut);cursor:pointer;font-weight:600;font-size:14px;transition:.15s}
+.tab:hover{color:var(--txt)}
+.tab.active{background:var(--panel2);color:var(--txt);box-shadow:inset 0 2px 0 var(--accent)}
+.wrap{padding:22px 30px 60px;max-width:1500px;margin:0 auto}
+.page{display:none} .page.active{display:block}
+.grid{display:grid;gap:18px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.kpi .label{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.kpi .val{font-size:30px;font-weight:700;margin-top:6px;line-height:1}
+.kpi .note{color:var(--mut);font-size:12px;margin-top:6px}
+.kpi .val.good{color:var(--accent2)} .kpi .val.warn{color:var(--warn)} .kpi .val.gold{color:var(--gold)}
+.row2{grid-template-columns:1fr 1fr} .row3{grid-template-columns:2fr 1fr}
+@media(max-width:1000px){.row2,.row3{grid-template-columns:1fr}}
+.card h3{margin:0 0 4px;font-size:15px} .card .cap{color:var(--mut);font-size:12px;margin-bottom:12px}
+.chartbox{position:relative;height:320px} .chartbox.tall{height:380px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+td.school,th.school{text-align:left;font-weight:600;white-space:nowrap}
+.cell{border-radius:6px;font-weight:600;color:#0b1020}
+.na{color:var(--mut);font-style:italic;font-weight:400}
+.insights li{margin:0 0 10px;line-height:1.55;color:#dbe3f4;font-size:14px}
+.insights ul{margin:0;padding-left:18px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;margin-left:6px}
+.badge.up{background:rgba(56,211,159,.16);color:var(--accent2)}
+.badge.down{background:rgba(255,107,107,.16);color:var(--warn)}
+.legend{display:flex;gap:14px;align-items:center;color:var(--mut);font-size:12px;margin-top:10px;flex-wrap:wrap}
+.swatch{width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:-2px;margin-right:5px}
+.foot{color:var(--mut);font-size:12px;margin-top:26px;line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+.pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--mut);margin:0 6px 6px 0}
+h2.section{font-size:16px;margin:26px 0 4px;color:var(--txt)}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Primary EASE 2025/2026 — Final Exam Results Dashboard</h1>
+  <div class="sub">Quality-report averages &amp; participation across 8 partner schools · EASE 1 (Grades 4–6) &amp; EASE 2 (Grades 4–5) · Scores are participation-weighted; non-participating entries excluded.</div>
+</header>
+<div class="tabs" id="tabs"></div>
+<div class="wrap">
+  <div class="page" id="page-overview"></div>
+  <div class="page" id="page-ease1"></div>
+  <div class="page" id="page-ease2"></div>
+</div>
+
+<script>
+const DB = {"subjects": ["English", "Science", "Mathematics", "Bahasa Indonesia", "Religion"], "metrics": {"EASE 1": {"grades": ["Grade 4", "Grade 5", "Grade 6"], "participates": {"Pribadi Depok": true, "Pribadi Bandung": true, "Kharisma Bangsa": true, "Prestige School": true, "Semesta 2": true, "Pribadi Premiere": true, "Fatih Bilingual School": false, "TNA Fatih": false}, "nSchools": 6, "school_overall": {"Pribadi Depok": 80.41, "Pribadi Bandung": 76.0, "Kharisma Bangsa": 82.4, "Prestige School": 72.44, "Semesta 2": 84.01, "Pribadi Premiere": 82.79, "Fatih Bilingual School": null, "TNA Fatih": null}, "school_simple": {"Pribadi Depok": 80.47, "Pribadi Bandung": 76.2, "Kharisma Bangsa": 82.07, "Prestige School": 72.6, "Semesta 2": 84.0, "Pribadi Premiere": 83.9, "Fatih Bilingual School": null, "TNA Fatih": null}, "subj_overall": {"English": 81.97, "Science": 78.26, "Mathematics": 77.71, "Bahasa Indonesia": 81.92, "Religion": 82.35}, "subj_by_grade": {"English": {"Grade 4": 77.54, "Grade 5": 85.13, "Grade 6": 83.67}, "Science": {"Grade 4": 81.51, "Grade 5": 72.34, "Grade 6": 80.9}, "Mathematics": {"Grade 4": 73.85, "Grade 5": 77.49, "Grade 6": 82.43}, "Bahasa Indonesia": {"Grade 4": 80.67, "Grade 5": 82.2, "Grade 6": 83.09}, "Religion": {"Grade 4": 81.37, "Grade 5": 81.56, "Grade 6": 84.46}}, "grade_overall": {"Grade 4": 78.99, "Grade 5": 79.73, "Grade 6": 82.89}, "overall": 80.43, "total_sittings": 2431, "students_est": 497, "heat": {"Pribadi Depok": {"English": 81.51, "Science": 78.22, "Mathematics": 75.4, "Bahasa Indonesia": 80.33, "Religion": 86.97}, "Pribadi Bandung": {"English": 79.97, "Science": 73.84, "Mathematics": 73.09, "Bahasa Indonesia": 77.44, "Religion": 75.65}, "Kharisma Bangsa": {"English": 83.91, "Science": 83.42, "Mathematics": 82.0, "Bahasa Indonesia": 81.26, "Religion": 81.34}, "Prestige School": {"English": 71.82, "Science": 70.73, "Mathematics": 65.75, "Bahasa Indonesia": 76.13, "Religion": 77.96}, "Semesta 2": {"English": 85.23, "Science": 80.7, "Mathematics": 81.49, "Bahasa Indonesia": 87.62, "Religion": 85.04}, "Pribadi Premiere": {"English": 84.32, "Science": 74.79, "Mathematics": 84.32, "Bahasa Indonesia": 81.25, "Religion": 89.29}, "Fatih Bilingual School": {"English": null, "Science": null, "Mathematics": null, "Bahasa Indonesia": null, "Religion": null}, "TNA Fatih": {"English": null, "Science": null, "Mathematics": null, "Bahasa Indonesia": null, "Religion": null}}, "part_school_grade": {"Pribadi Depok": {"Grade 4": 22, "Grade 5": 20, "Grade 6": 23}, "Pribadi Bandung": {"Grade 4": 30, "Grade 5": 31, "Grade 6": 27}, "Kharisma Bangsa": {"Grade 4": 42, "Grade 5": 21, "Grade 6": 41}, "Prestige School": {"Grade 4": 24, "Grade 5": 15, "Grade 6": 16}, "Semesta 2": {"Grade 4": 53, "Grade 5": 59, "Grade 6": 45}, "Pribadi Premiere": {"Grade 4": 9, "Grade 5": 19, "Grade 6": 0}, "Fatih Bilingual School": {"Grade 4": 0, "Grade 5": 0, "Grade 6": 0}, "TNA Fatih": {"Grade 4": 0, "Grade 5": 0, "Grade 6": 0}}}, "EASE 2": {"grades": ["Grade 4", "Grade 5"], "participates": {"Pribadi Depok": true, "Pribadi Bandung": true, "Kharisma Bangsa": true, "Prestige School": true, "Semesta 2": true, "Pribadi Premiere": true, "Fatih Bilingual School": true, "TNA Fatih": true}, "nSchools": 8, "school_overall": {"Pribadi Depok": 81.55, "Pribadi Bandung": 76.05, "Kharisma Bangsa": 82.66, "Prestige School": 70.87, "Semesta 2": 84.44, "Pribadi Premiere": 86.01, "Fatih Bilingual School": 77.6, "TNA Fatih": 76.51}, "school_simple": {"Pribadi Depok": 81.68, "Pribadi Bandung": 76.19, "Kharisma Bangsa": 83.21, "Prestige School": 71.62, "Semesta 2": 84.38, "Pribadi Premiere": 86.51, "Fatih Bilingual School": 78.61, "TNA Fatih": 77.07}, "subj_overall": {"English": 82.65, "Science": 79.28, "Mathematics": 79.93, "Bahasa Indonesia": 88.21, "Religion": 71.11}, "subj_by_grade": {"English": {"Grade 4": 83.65, "Grade 5": 81.46}, "Science": {"Grade 4": 77.44, "Grade 5": 81.46}, "Mathematics": {"Grade 4": 79.09, "Grade 5": 80.9}, "Bahasa Indonesia": {"Grade 4": 86.28, "Grade 5": 90.44}, "Religion": {"Grade 4": 64.14, "Grade 5": 79.13}}, "grade_overall": {"Grade 4": 78.14, "Grade 5": 82.67}, "overall": 80.23, "total_sittings": 2030, "students_est": 413, "heat": {"Pribadi Depok": {"English": 85.4, "Science": 81.85, "Mathematics": 80.68, "Bahasa Indonesia": 83.5, "Religion": 76.05}, "Pribadi Bandung": {"English": 82.96, "Science": 76.0, "Mathematics": 74.44, "Bahasa Indonesia": 84.0, "Religion": 63.22}, "Kharisma Bangsa": {"English": 90.16, "Science": 84.51, "Mathematics": 83.93, "Bahasa Indonesia": 87.13, "Religion": 67.05}, "Prestige School": {"English": 72.1, "Science": 69.34, "Mathematics": 65.95, "Bahasa Indonesia": 85.03, "Religion": 61.45}, "Semesta 2": {"English": 86.29, "Science": 83.49, "Mathematics": 86.43, "Bahasa Indonesia": 92.69, "Religion": 73.39}, "Pribadi Premiere": {"English": 86.37, "Science": 84.93, "Mathematics": 85.34, "Bahasa Indonesia": 88.29, "Religion": 85.12}, "Fatih Bilingual School": {"English": 77.1, "Science": 72.53, "Mathematics": 74.67, "Bahasa Indonesia": 91.72, "Religion": 72.44}, "TNA Fatih": {"English": 68.53, "Science": 72.21, "Mathematics": 76.7, "Bahasa Indonesia": 88.6, "Religion": 75.92}}, "part_school_grade": {"Pribadi Depok": {"Grade 4": 22, "Grade 5": 19}, "Pribadi Bandung": {"Grade 4": 29, "Grade 5": 31}, "Kharisma Bangsa": {"Grade 4": 43, "Grade 5": 20}, "Prestige School": {"Grade 4": 24, "Grade 5": 15}, "Semesta 2": {"Grade 4": 54, "Grade 5": 58}, "Pribadi Premiere": {"Grade 4": 9, "Grade 5": 19}, "Fatih Bilingual School": {"Grade 4": 19, "Grade 5": 11}, "TNA Fatih": {"Grade 4": 22, "Grade 5": 18}}}}, "raw": {"EASE 1": {"grades": ["Grade 4", "Grade 5", "Grade 6"], "data": {"English": {"Pribadi Depok": {"Grade 4": {"avg": 79.0, "part": 22}, "Grade 5": {"avg": 86.0, "part": 20}, "Grade 6": {"avg": 80.0, "part": 23}}, "Pribadi Bandung": {"Grade 4": {"avg": 77.0, "part": 29}, "Grade 5": {"avg": 81.0, "part": 30}, "Grade 6": {"avg": 82.0, "part": 27}}, "Kharisma Bangsa": {"Grade 4": {"avg": 80.0, "part": 38}, "Grade 5": {"avg": 83.0, "part": 21}, "Grade 6": {"avg": 88.0, "part": 41}}, "Prestige School": {"Grade 4": {"avg": 67.0, "part": 24}, "Grade 5": {"avg": 74.0, "part": 15}, "Grade 6": {"avg": 77.0, "part": 16}}, "Semesta 2": {"Grade 4": {"avg": 79.0, "part": 52}, "Grade 5": {"avg": 91.0, "part": 58}, "Grade 6": {"avg": 85.0, "part": 44}}, "Pribadi Premiere": {"Grade 4": {"avg": 85.0, "part": 9}, "Grade 5": {"avg": 84.0, "part": 19}, "Grade 6": {"avg": 0.0, "part": 0}}, "Fatih Bilingual School": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}, "TNA Fatih": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}}, "Science": {"Pribadi Depok": {"Grade 4": {"avg": 79.0, "part": 22}, "Grade 5": {"avg": 73.0, "part": 20}, "Grade 6": {"avg": 82.0, "part": 23}}, "Pribadi Bandung": {"Grade 4": {"avg": 77.0, "part": 29}, "Grade 5": {"avg": 69.0, "part": 31}, "Grade 6": {"avg": 76.0, "part": 27}}, "Kharisma Bangsa": {"Grade 4": {"avg": 85.0, "part": 40}, "Grade 5": {"avg": 77.0, "part": 20}, "Grade 6": {"avg": 85.0, "part": 41}}, "Prestige School": {"Grade 4": {"avg": 74.0, "part": 24}, "Grade 5": {"avg": 62.0, "part": 15}, "Grade 6": {"avg": 74.0, "part": 16}}, "Semesta 2": {"Grade 4": {"avg": 85.0, "part": 51}, "Grade 5": {"avg": 76.0, "part": 59}, "Grade 6": {"avg": 82.0, "part": 45}}, "Pribadi Premiere": {"Grade 4": {"avg": 87.0, "part": 9}, "Grade 5": {"avg": 69.0, "part": 19}, "Grade 6": {"avg": 0.0, "part": 0}}, "Fatih Bilingual School": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}, "TNA Fatih": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}}, "Mathematics": {"Pribadi Depok": {"Grade 4": {"avg": 66.0, "part": 22}, "Grade 5": {"avg": 77.0, "part": 20}, "Grade 6": {"avg": 83.0, "part": 23}}, "Pribadi Bandung": {"Grade 4": {"avg": 70.0, "part": 28}, "Grade 5": {"avg": 69.0, "part": 31}, "Grade 6": {"avg": 81.0, "part": 27}}, "Kharisma Bangsa": {"Grade 4": {"avg": 80.0, "part": 41}, "Grade 5": {"avg": 82.0, "part": 19}, "Grade 6": {"avg": 84.0, "part": 41}}, "Prestige School": {"Grade 4": {"avg": 64.0, "part": 24}, "Grade 5": {"avg": 64.0, "part": 15}, "Grade 6": {"avg": 70.0, "part": 16}}, "Semesta 2": {"Grade 4": {"avg": 77.0, "part": 52}, "Grade 5": {"avg": 82.0, "part": 59}, "Grade 6": {"avg": 86.0, "part": 45}}, "Pribadi Premiere": {"Grade 4": {"avg": 85.0, "part": 9}, "Grade 5": {"avg": 84.0, "part": 19}, "Grade 6": {"avg": 0.0, "part": 0}}, "Fatih Bilingual School": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}, "TNA Fatih": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}}, "Bahasa Indonesia": {"Pribadi Depok": {"Grade 4": {"avg": 81.0, "part": 20}, "Grade 5": {"avg": 80.0, "part": 19}, "Grade 6": {"avg": 80.0, "part": 21}}, "Pribadi Bandung": {"Grade 4": {"avg": 79.0, "part": 29}, "Grade 5": {"avg": 72.0, "part": 31}, "Grade 6": {"avg": 82.0, "part": 27}}, "Kharisma Bangsa": {"Grade 4": {"avg": 77.0, "part": 40}, "Grade 5": {"avg": 81.0, "part": 18}, "Grade 6": {"avg": 86.0, "part": 37}}, "Prestige School": {"Grade 4": {"avg": 75.0, "part": 24}, "Grade 5": {"avg": 77.0, "part": 15}, "Grade 6": {"avg": 77.0, "part": 16}}, "Semesta 2": {"Grade 4": {"avg": 86.0, "part": 52}, "Grade 5": {"avg": 91.0, "part": 59}, "Grade 6": {"avg": 85.0, "part": 44}}, "Pribadi Premiere": {"Grade 4": {"avg": 86.0, "part": 9}, "Grade 5": {"avg": 79.0, "part": 19}, "Grade 6": {"avg": 0.0, "part": 0}}, "Fatih Bilingual School": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}, "TNA Fatih": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}}, "Religion": {"Pribadi Depok": {"Grade 4": {"avg": 83.0, "part": 21}, "Grade 5": {"avg": 88.0, "part": 19}, "Grade 6": {"avg": 90.0, "part": 21}}, "Pribadi Bandung": {"Grade 4": {"avg": 77.0, "part": 30}, "Grade 5": {"avg": 69.0, "part": 30}, "Grade 6": {"avg": 82.0, "part": 25}}, "Kharisma Bangsa": {"Grade 4": {"avg": 80.0, "part": 42}, "Grade 5": {"avg": 79.0, "part": 18}, "Grade 6": {"avg": 84.0, "part": 37}}, "Prestige School": {"Grade 4": {"avg": 78.0, "part": 24}, "Grade 5": {"avg": 76.0, "part": 15}, "Grade 6": {"avg": 80.0, "part": 14}}, "Semesta 2": {"Grade 4": {"avg": 84.0, "part": 53}, "Grade 5": {"avg": 86.0, "part": 59}, "Grade 6": {"avg": 85.0, "part": 45}}, "Pribadi Premiere": {"Grade 4": {"avg": 92.0, "part": 9}, "Grade 5": {"avg": 88.0, "part": 19}, "Grade 6": {"avg": 0.0, "part": 0}}, "Fatih Bilingual School": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}, "TNA Fatih": {"Grade 4": {"avg": 0.0, "part": 0}, "Grade 5": {"avg": 0.0, "part": 0}, "Grade 6": {"avg": 0.0, "part": 0}}}}, "schools": ["Pribadi Depok", "Pribadi Bandung", "Kharisma Bangsa", "Prestige School", "Semesta 2", "Pribadi Premiere", "Fatih Bilingual School", "TNA Fatih"]}, "EASE 2": {"grades": ["Grade 4", "Grade 5"], "data": {"English": {"Pribadi Depok": {"Grade 4": {"avg": 84.91, "part": 22}, "Grade 5": {"avg": 86.0, "part": 18}}, "Pribadi Bandung": {"Grade 4": {"avg": 88.14, "part": 28}, "Grade 5": {"avg": 78.13, "part": 30}}, "Kharisma Bangsa": {"Grade 4": {"avg": 91.44, "part": 43}, "Grade 5": {"avg": 87.4, "part": 20}}, "Prestige School": {"Grade 4": {"avg": 72.17, "part": 24}, "Grade 5": {"avg": 72.0, "part": 15}}, "Semesta 2": {"Grade 4": {"avg": 88.74, "part": 54}, "Grade 5": {"avg": 84.0, "part": 58}}, "Pribadi Premiere": {"Grade 4": {"avg": 86.22, "part": 9}, "Grade 5": {"avg": 86.44, "part": 18}}, "Fatih Bilingual School": {"Grade 4": {"avg": 77.26, "part": 19}, "Grade 5": {"avg": 76.8, "part": 10}}, "TNA Fatih": {"Grade 4": {"avg": 65.14, "part": 21}, "Grade 5": {"avg": 72.71, "part": 17}}}, "Science": {"Pribadi Depok": {"Grade 4": {"avg": 80.36, "part": 22}, "Grade 5": {"avg": 83.58, "part": 19}}, "Pribadi Bandung": {"Grade 4": {"avg": 78.34, "part": 29}, "Grade 5": {"avg": 73.66, "part": 29}}, "Kharisma Bangsa": {"Grade 4": {"avg": 83.35, "part": 43}, "Grade 5": {"avg": 87.0, "part": 20}}, "Prestige School": {"Grade 4": {"avg": 66.17, "part": 24}, "Grade 5": {"avg": 74.4, "part": 15}}, "Semesta 2": {"Grade 4": {"avg": 81.26, "part": 54}, "Grade 5": {"avg": 85.61, "part": 57}}, "Pribadi Premiere": {"Grade 4": {"avg": 90.0, "part": 8}, "Grade 5": {"avg": 82.67, "part": 18}}, "Fatih Bilingual School": {"Grade 4": {"avg": 69.47, "part": 19}, "Grade 5": {"avg": 77.82, "part": 11}}, "TNA Fatih": {"Grade 4": {"avg": 66.48, "part": 21}, "Grade 5": {"avg": 79.29, "part": 17}}}, "Mathematics": {"Pribadi Depok": {"Grade 4": {"avg": 81.82, "part": 22}, "Grade 5": {"avg": 79.37, "part": 19}}, "Pribadi Bandung": {"Grade 4": {"avg": 78.57, "part": 28}, "Grade 5": {"avg": 70.71, "part": 31}}, "Kharisma Bangsa": {"Grade 4": {"avg": 83.16, "part": 43}, "Grade 5": {"avg": 85.6, "part": 20}}, "Prestige School": {"Grade 4": {"avg": 68.5, "part": 24}, "Grade 5": {"avg": 61.87, "part": 15}}, "Semesta 2": {"Grade 4": {"avg": 85.11, "part": 54}, "Grade 5": {"avg": 87.66, "part": 58}}, "Pribadi Premiere": {"Grade 4": {"avg": 91.5, "part": 8}, "Grade 5": {"avg": 82.74, "part": 19}}, "Fatih Bilingual School": {"Grade 4": {"avg": 74.53, "part": 19}, "Grade 5": {"avg": 74.91, "part": 11}}, "TNA Fatih": {"Grade 4": {"avg": 65.27, "part": 22}, "Grade 5": {"avg": 90.67, "part": 18}}}, "Bahasa Indonesia": {"Pribadi Depok": {"Grade 4": {"avg": 84.18, "part": 22}, "Grade 5": {"avg": 82.67, "part": 18}}, "Pribadi Bandung": {"Grade 4": {"avg": 84.89, "part": 27}, "Grade 5": {"avg": 83.2, "part": 30}}, "Kharisma Bangsa": {"Grade 4": {"avg": 87.12, "part": 41}, "Grade 5": {"avg": 87.16, "part": 19}}, "Prestige School": {"Grade 4": {"avg": 79.17, "part": 24}, "Grade 5": {"avg": 94.4, "part": 15}}, "Semesta 2": {"Grade 4": {"avg": 90.0, "part": 54}, "Grade 5": {"avg": 95.23, "part": 57}}, "Pribadi Premiere": {"Grade 4": {"avg": 86.0, "part": 8}, "Grade 5": {"avg": 89.26, "part": 19}}, "Fatih Bilingual School": {"Grade 4": {"avg": 88.89, "part": 18}, "Grade 5": {"avg": 96.36, "part": 11}}, "TNA Fatih": {"Grade 4": {"avg": 85.09, "part": 22}, "Grade 5": {"avg": 92.89, "part": 18}}}, "Religion": {"Pribadi Depok": {"Grade 4": {"avg": 68.25, "part": 21}, "Grade 5": {"avg": 85.69, "part": 17}}, "Pribadi Bandung": {"Grade 4": {"avg": 61.9, "part": 28}, "Grade 5": {"avg": 64.41, "part": 31}}, "Kharisma Bangsa": {"Grade 4": {"avg": 62.11, "part": 41}, "Grade 5": {"avg": 77.72, "part": 19}}, "Prestige School": {"Grade 4": {"avg": 51.53, "part": 22}, "Grade 5": {"avg": 76.0, "part": 15}}, "Semesta 2": {"Grade 4": {"avg": 64.14, "part": 54}, "Grade 5": {"avg": 82.01, "part": 58}}, "Pribadi Premiere": {"Grade 4": {"avg": 85.19, "part": 9}, "Grade 5": {"avg": 85.09, "part": 19}}, "Fatih Bilingual School": {"Grade 4": {"avg": 65.26, "part": 19}, "Grade 5": {"avg": 84.85, "part": 11}}, "TNA Fatih": {"Grade 4": {"avg": 69.85, "part": 22}, "Grade 5": {"avg": 83.33, "part": 18}}}}, "schools": ["Pribadi Depok", "Pribadi Bandung", "Kharisma Bangsa", "Prestige School", "Semesta 2", "Pribadi Premiere", "Fatih Bilingual School", "TNA Fatih"]}}, "comparison": {"common_grades": ["Grade 4", "Grade 5"], "active_both": ["Pribadi Depok", "Pribadi Bandung", "Kharisma Bangsa", "Prestige School", "Semesta 2", "Pribadi Premiere"], "schools": {"Pribadi Depok": {"e1": 79.04, "e2": 81.55, "delta": 2.51}, "Pribadi Bandung": {"e1": 73.95, "e2": 76.05, "delta": 2.1}, "Kharisma Bangsa": {"e1": 80.41, "e2": 82.66, "delta": 2.25}, "Prestige School": {"e1": 71.22, "e2": 70.87, "delta": -0.35}, "Semesta 2": {"e1": 83.78, "e2": 84.44, "delta": 0.66}, "Pribadi Premiere": {"e1": 82.79, "e2": 86.01, "delta": 3.22}}, "subjects": {"English": {"e1": 81.21, "e2": 84.71, "delta": 3.5}, "Science": {"e1": 77.08, "e2": 80.67, "delta": 3.59}, "Mathematics": {"e1": 75.6, "e2": 80.77, "delta": 5.17}, "Bahasa Indonesia": {"e1": 81.41, "e2": 87.86, "delta": 6.45}, "Religion": {"e1": 81.46, "e2": 70.42, "delta": -11.04}}}, "insights": {"EASE 1": ["<b>Semesta 2</b> is the top-performing school with an overall average of <b>84.01</b>, while <b>Prestige School</b> trails the cohort at <b>72.44</b> — a spread of <b>11.6 points</b>.", "Strongest subject across the cohort is <b>Religion</b> (82.35); weakest is <b>Mathematics</b> (77.71).", "Grade-level averages: G4 78.99, G5 79.73, G6 82.89.", "<b>6 of 8 schools</b> participated, with an estimated <b>497 students</b> assessed across 3 grade levels (2431 subject sittings)."], "EASE 2": ["<b>Pribadi Premiere</b> is the top-performing school with an overall average of <b>86.01</b>, while <b>Prestige School</b> trails the cohort at <b>70.87</b> — a spread of <b>15.1 points</b>.", "Strongest subject across the cohort is <b>Bahasa Indonesia</b> (88.21); weakest is <b>Religion</b> (71.11).", "Grade-level averages: G4 78.14, G5 82.67.", "<b>8 of 8 schools</b> participated, with an estimated <b>413 students</b> assessed across 2 grade levels (2030 subject sittings)."], "comparison": ["On the like-for-like cohort (Grades 4–5, the 6 schools present in both rounds), overall performance was broadly stable, but subject-level shifts were large.", "Biggest gain: <b>Bahasa Indonesia</b> rose <b>+6.45 points</b> (EASE 1 → EASE 2). Biggest drop: <b>Religion</b> fell <b>-11.04 points</b> — the standout concern of the year.", "Most-improved school: <b>Pribadi Premiere</b> (+3.22). Every school except <b>Prestige School</b> improved or held steady on the common cohort.", "EASE 2 brought <b>Fatih Bilingual School</b> and <b>TNA Fatih</b> into the assessment (absent in EASE 1), raising participating schools from 6 to 8.", "4 of 5 academic subjects improved (English, Science, Math, Bahasa Indonesia all up 3.5–6.5 pts); only <b>Religion</b> regressed sharply — driven largely by weak Grade-4 Religion scores in EASE 2."]}};
+const SUB = DB.subjects;
+const PAL = ['#5b8cff','#38d39f','#ffd166','#ff6b6b','#b388ff','#4dd0e1','#f78fb3','#9ccc65'];
+Chart.defaults.color='#9aa7c2'; Chart.defaults.borderColor='#2a3550';
+Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif";
+
+function color(v){ // 0-100 -> red..green
+  if(v==null) return '#243049';
+  const t=Math.max(0,Math.min(1,(v-60)/35));
+  const r=Math.round(220-130*t), g=Math.round(90+150*t), bl=Math.round(90+50*t);
+  return `rgb(${r},${g},${bl})`;
+}
+function rank(o){return Object.entries(o).filter(e=>e[1]).sort((a,b)=>b[1]-a[1]);}
+
+// ---------- Tabs ----------
+const tabsDef=[['overview','Overview &amp; Comparison'],['ease1','EASE 1'],['ease2','EASE 2']];
+const tabsEl=document.getElementById('tabs');
+tabsDef.forEach(([id,lbl],i)=>{
+  const t=document.createElement('div');t.className='tab'+(i===0?' active':'');t.innerHTML=lbl;
+  t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');document.getElementById('page-'+id).classList.add('active');};
+  tabsEl.appendChild(t);
+});
+
+function kpi(label,val,cls,note){return `<div class="card kpi"><div class="label">${label}</div><div class="val ${cls||''}">${val}</div>${note?`<div class="note">${note}</div>`:''}</div>`;}
+function chartCard(title,cap,id,tall){return `<div class="card"><h3>${title}</h3><div class="cap">${cap}</div><div class="chartbox${tall?' tall':''}"><canvas id="${id}"></canvas></div></div>`;}
+
+// ---------- EASE page builder ----------
+function buildEase(ease,pid){
+  const m=DB.metrics[ease], raw=DB.raw[ease], grades=m.grades, schools=raw.schools;
+  const sr=rank(m.school_overall), sub=rank(m.subj_overall);
+  const ins=DB.insights[ease];
+  const el=document.getElementById(pid);
+  let h='';
+  // KPIs
+  h+='<div class="grid kpis">';
+  h+=kpi('Overall Average',m.overall,'good','participation-weighted, all subjects');
+  h+=kpi('Schools Participating',m.nSchools+' / 8','', grades.length+' grade levels');
+  h+=kpi('Students Assessed','~'+m.students_est,'', m.total_sittings.toLocaleString()+' subject sittings');
+  h+=kpi('Top School',sr[0][1].replace('Pribadi ','P. ').replace(' School',''),'gold',sr[0][1]+' · '+sr[0][0]);
+  h+=kpi('Strongest Subject',sub[0][1],'good',sub[0][0]);
+  h+=kpi('Needs Attention',sub[sub.length-1][1],'warn',sub[sub.length-1][0]);
+  h+='</div>';
+  // insights
+  h+='<div class="card insights"><h3>🔍 Key Insights — '+ease+'</h3><ul>'+ins.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  h+='<div style="height:18px"></div>';
+  // charts row: school ranking + subject
+  h+='<div class="grid row2">';
+  h+=chartCard('🏆 School Ranking','Overall average across all subjects &amp; grades','c_'+pid+'_sch',true);
+  h+=chartCard('📚 Subject Performance','Cohort average by subject','c_'+pid+'_sub',true);
+  h+='</div><div style="height:18px"></div>';
+  // grade comparison
+  h+='<div class="grid row3">';
+  h+=chartCard('📈 Subject × Grade','Average score per subject by grade level','c_'+pid+'_grd',true);
+  h+=chartCard('👥 Participation by School','Estimated cohort size per grade','c_'+pid+'_part',true);
+  h+='</div><div style="height:18px"></div>';
+  // heatmap
+  h+='<div class="card"><h3>🌡️ Performance Heatmap — School × Subject</h3><div class="cap">Weighted average per cell. Greener = higher. “—” = did not participate.</div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th class="school">School</th>';
+  SUB.forEach(s=>h+='<th>'+s+'</th>'); h+='<th>Overall</th></tr></thead><tbody>';
+  schools.forEach(sc=>{
+    h+='<tr><td class="school">'+sc+'</td>';
+    SUB.forEach(s=>{const v=m.heat[sc][s];
+      h+=v?`<td><span class="cell" style="background:${color(v)};padding:4px 8px;display:inline-block;min-width:42px">${v}</span></td>`:'<td class="na">—</td>';});
+    const ov=m.school_overall[sc];
+    h+=ov?`<td><span class="cell" style="background:${color(ov)};padding:4px 8px;display:inline-block;min-width:42px;font-weight:700">${ov}</span></td>`:'<td class="na">—</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div><div class="legend"><span class="swatch" style="background:'+color(62)+'"></span>≤65<span class="swatch" style="background:'+color(75)+'"></span>~75<span class="swatch" style="background:'+color(85)+'"></span>85<span class="swatch" style="background:'+color(95)+'"></span>95+</div></div>';
+  el.innerHTML=h;
+
+  // ----- charts -----
+  // school ranking
+  new Chart(document.getElementById('c_'+pid+'_sch'),{type:'bar',
+    data:{labels:sr.map(e=>e[0]),datasets:[{data:sr.map(e=>e[1]),
+      backgroundColor:sr.map(e=>color(e[1])),borderRadius:6}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{min:60,max:95,title:{display:true,text:'Average score'}}}}});
+  // subject
+  new Chart(document.getElementById('c_'+pid+'_sub'),{type:'bar',
+    data:{labels:sub.map(e=>e[0]),datasets:[{data:sub.map(e=>e[1]),
+      backgroundColor:sub.map((e,i)=>PAL[i%PAL.length]),borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{min:60,max:95,title:{display:true,text:'Average'}}}}});
+  // subject x grade
+  new Chart(document.getElementById('c_'+pid+'_grd'),{type:'bar',
+    data:{labels:SUB,datasets:grades.map((g,i)=>({label:g,
+      data:SUB.map(s=>m.subj_by_grade[s][g]),backgroundColor:PAL[i],borderRadius:5}))},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{min:55,max:95,title:{display:true,text:'Average'}}}}});
+  // participation stacked
+  new Chart(document.getElementById('c_'+pid+'_part'),{type:'bar',
+    data:{labels:schools.map(s=>s.replace('Pribadi ','P. ').replace(' School','').replace(' Bilingual','')),
+      datasets:grades.map((g,i)=>({label:g,data:schools.map(s=>m.part_school_grade[s][g]),
+        backgroundColor:PAL[i],borderRadius:4}))},
+    options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'Students'}}}}});
+}
+
+// ---------- Overview / Comparison ----------
+function buildOverview(){
+  const C=DB.comparison, m1=DB.metrics['EASE 1'], m2=DB.metrics['EASE 2'];
+  const el=document.getElementById('page-overview');
+  const ins=DB.insights.comparison;
+  let h='';
+  h+='<div class="grid kpis">';
+  h+=kpi('EASE 1 Overall',m1.overall,'', 'Grades 4–6 · 6 schools');
+  h+=kpi('EASE 2 Overall',m2.overall,'', 'Grades 4–5 · 8 schools');
+  const dN=m2.nSchools-m1.nSchools;
+  h+=kpi('Participation','+'+dN+' schools','good','Fatih &amp; TNA joined in EASE 2');
+  const bestSub=Object.entries(C.subjects).filter(e=>e[1].delta!=null).sort((a,b)=>b[1].delta-a[1].delta);
+  h+=kpi('Biggest Gain',bestSub[0][0],'good','+'+bestSub[0][1].delta+' pts');
+  h+=kpi('Biggest Drop',bestSub[bestSub.length-1][0],'warn',bestSub[bestSub.length-1][1].delta+' pts');
+  h+='</div>';
+  h+='<div class="card insights"><h3>🔁 EASE 1 → EASE 2 — Cross-Round Insights</h3>'+
+     '<div class="cap" style="margin-bottom:10px">Like-for-like comparison: Grades 4 &amp; 5 only, restricted to the 6 schools present in both rounds (fair-cohort basis).</div>'+
+     '<ul>'+ins.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  h+='<div style="height:18px"></div>';
+  h+='<div class="grid row2">';
+  h+=chartCard('🏫 School: EASE 1 vs EASE 2','Same 6 schools, Grades 4–5 only','c_ov_sch',true);
+  h+=chartCard('📚 Subject: EASE 1 vs EASE 2','Same cohort, Grades 4–5 only','c_ov_sub',true);
+  h+='</div><div style="height:18px"></div>';
+  // delta table
+  h+='<div class="card"><h3>📋 Subject Movement (fair cohort)</h3><div class="cap">Change in weighted average, EASE 1 → EASE 2.</div>'+
+     '<table><thead><tr><th class="school">Subject</th><th>EASE 1</th><th>EASE 2</th><th>Change</th></tr></thead><tbody>';
+  bestSub.forEach(([s,v])=>{const up=v.delta>=0;
+    h+=`<tr><td class="school">${s}</td><td>${v.e1}</td><td>${v.e2}</td><td><span class="badge ${up?'up':'down'}">${up?'▲ +':'▼ '}${v.delta}</span></td></tr>`;});
+  h+='</tbody></table></div>';
+  h+='<div style="height:18px"></div>';
+  // school delta table
+  h+='<div class="card"><h3>📋 School Movement (fair cohort)</h3><div class="cap">Overall change, EASE 1 → EASE 2 (Grades 4–5).</div>'+
+     '<table><thead><tr><th class="school">School</th><th>EASE 1</th><th>EASE 2</th><th>Change</th></tr></thead><tbody>';
+  Object.entries(C.schools).sort((a,b)=>b[1].delta-a[1].delta).forEach(([s,v])=>{const up=v.delta>=0;
+    h+=`<tr><td class="school">${s}</td><td>${v.e1}</td><td>${v.e2}</td><td><span class="badge ${up?'up':'down'}">${up?'▲ +':'▼ '}${v.delta}</span></td></tr>`;});
+  h+='</tbody></table></div>';
+  h+='<div class="foot"><b>Methodology &amp; notes.</b> Cell scores are school "Quality Report" averages from the source workbooks. Cohort/subject/grade aggregates are weighted by the number of participating students. '+
+     'Zero values denote non-participation (not a score of 0) and are excluded from every average. EASE 1 covers Grades 4–6; EASE 2 covers Grades 4–5. '+
+     'Cross-round comparisons are restricted to Grades 4–5 and the 6 schools assessed in both rounds so changes reflect real movement, not differences in coverage. '+
+     'Student counts are estimated as the largest subject participation per school-grade (a cohort proxy, since per-student records are not in the source).</div>';
+  el.innerHTML=h;
+
+  const sc=Object.entries(C.schools).sort((a,b)=>b[1].e2-a[1].e2);
+  new Chart(document.getElementById('c_ov_sch'),{type:'bar',
+    data:{labels:sc.map(e=>e[0].replace('Pribadi ','P. ').replace(' School','')),
+      datasets:[{label:'EASE 1',data:sc.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
+                {label:'EASE 2',data:sc.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:90,title:{display:true,text:'Average'}}}}});
+  const su=Object.entries(C.subjects);
+  new Chart(document.getElementById('c_ov_sub'),{type:'bar',
+    data:{labels:su.map(e=>e[0]),
+      datasets:[{label:'EASE 1',data:su.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
+                {label:'EASE 2',data:su.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:92,title:{display:true,text:'Average'}}}}});
+}
+
+buildOverview();
+buildEase('EASE 1','page-ease1');
+buildEase('EASE 2','page-ease2');
+document.getElementById('page-overview').classList.add('active');
+</script>
+</body></html>
