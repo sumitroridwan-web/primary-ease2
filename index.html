@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Primary EASE 2025/2026 — Final Exam Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="chart.min.js"></script>
 <style>
 :root{
   --bg:#0f1420; --panel:#171e2e; --panel2:#1d263a; --line:#2a3550;
@@ -73,6 +73,17 @@ const PAL = ['#5b8cff','#38d39f','#ffd166','#ff6b6b','#b388ff','#4dd0e1','#f78fb
 Chart.defaults.color='#9aa7c2'; Chart.defaults.borderColor='#2a3550';
 Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif";
 
+function mkChart(id,cfg){ // resilient: never let a chart error blank the page
+  try{
+    const cv=document.getElementById(id);
+    if(!cv){return;}
+    if(typeof Chart==='undefined'){
+      cv.closest('.chartbox').innerHTML='<div style="color:#9aa7c2;font-size:13px;padding:20px;text-align:center">Chart library unavailable.</div>';
+      return;
+    }
+    return new Chart(cv,cfg);
+  }catch(e){ console.error('chart '+id,e); }
+}
 function color(v){ // 0-100 -> red..green
   if(v==null) return '#243049';
   const t=Math.max(0,Math.min(1,(v-60)/35));
@@ -107,9 +118,9 @@ function buildEase(ease,pid){
   h+=kpi('Overall Average',m.overall,'good','participation-weighted, all subjects');
   h+=kpi('Schools Participating',m.nSchools+' / 8','', grades.length+' grade levels');
   h+=kpi('Students Assessed','~'+m.students_est,'', m.total_sittings.toLocaleString()+' subject sittings');
-  h+=kpi('Top School',sr[0][1].replace('Pribadi ','P. ').replace(' School',''),'gold',sr[0][1]+' · '+sr[0][0]);
-  h+=kpi('Strongest Subject',sub[0][1],'good',sub[0][0]);
-  h+=kpi('Needs Attention',sub[sub.length-1][1],'warn',sub[sub.length-1][0]);
+  h+=kpi('Top School',sr[0][0].replace('Pribadi ','P. ').replace(' School',''),'gold',sr[0][0]+' · '+sr[0][1]);
+  h+=kpi('Strongest Subject',sub[0][0],'good',sub[0][1]);
+  h+=kpi('Needs Attention',sub[sub.length-1][0],'warn',sub[sub.length-1][1]);
   h+='</div>';
   // insights
   h+='<div class="card insights"><h3>🔍 Key Insights — '+ease+'</h3><ul>'+ins.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
@@ -141,23 +152,23 @@ function buildEase(ease,pid){
 
   // ----- charts -----
   // school ranking
-  new Chart(document.getElementById('c_'+pid+'_sch'),{type:'bar',
+  mkChart(('c_'+pid+'_sch'),{type:'bar',
     data:{labels:sr.map(e=>e[0]),datasets:[{data:sr.map(e=>e[1]),
       backgroundColor:sr.map(e=>color(e[1])),borderRadius:6}]},
     options:{indexAxis:'y',plugins:{legend:{display:false}},
       scales:{x:{min:60,max:95,title:{display:true,text:'Average score'}}}}});
   // subject
-  new Chart(document.getElementById('c_'+pid+'_sub'),{type:'bar',
+  mkChart(('c_'+pid+'_sub'),{type:'bar',
     data:{labels:sub.map(e=>e[0]),datasets:[{data:sub.map(e=>e[1]),
       backgroundColor:sub.map((e,i)=>PAL[i%PAL.length]),borderRadius:6}]},
     options:{plugins:{legend:{display:false}},scales:{y:{min:60,max:95,title:{display:true,text:'Average'}}}}});
   // subject x grade
-  new Chart(document.getElementById('c_'+pid+'_grd'),{type:'bar',
+  mkChart(('c_'+pid+'_grd'),{type:'bar',
     data:{labels:SUB,datasets:grades.map((g,i)=>({label:g,
       data:SUB.map(s=>m.subj_by_grade[s][g]),backgroundColor:PAL[i],borderRadius:5}))},
     options:{plugins:{legend:{position:'top'}},scales:{y:{min:55,max:95,title:{display:true,text:'Average'}}}}});
   // participation stacked
-  new Chart(document.getElementById('c_'+pid+'_part'),{type:'bar',
+  mkChart(('c_'+pid+'_part'),{type:'bar',
     data:{labels:schools.map(s=>s.replace('Pribadi ','P. ').replace(' School','').replace(' Bilingual','')),
       datasets:grades.map((g,i)=>({label:g,data:schools.map(s=>m.part_school_grade[s][g]),
         backgroundColor:PAL[i],borderRadius:4}))},
@@ -207,22 +218,23 @@ function buildOverview(){
   el.innerHTML=h;
 
   const sc=Object.entries(C.schools).sort((a,b)=>b[1].e2-a[1].e2);
-  new Chart(document.getElementById('c_ov_sch'),{type:'bar',
+  mkChart(('c_ov_sch'),{type:'bar',
     data:{labels:sc.map(e=>e[0].replace('Pribadi ','P. ').replace(' School','')),
       datasets:[{label:'EASE 1',data:sc.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
                 {label:'EASE 2',data:sc.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
     options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:90,title:{display:true,text:'Average'}}}}});
   const su=Object.entries(C.subjects);
-  new Chart(document.getElementById('c_ov_sub'),{type:'bar',
+  mkChart(('c_ov_sub'),{type:'bar',
     data:{labels:su.map(e=>e[0]),
       datasets:[{label:'EASE 1',data:su.map(e=>e[1].e1),backgroundColor:PAL[0],borderRadius:5},
                 {label:'EASE 2',data:su.map(e=>e[1].e2),backgroundColor:PAL[1],borderRadius:5}]},
     options:{plugins:{legend:{position:'top'}},scales:{y:{min:60,max:92,title:{display:true,text:'Average'}}}}});
 }
 
-buildOverview();
-buildEase('EASE 1','page-ease1');
-buildEase('EASE 2','page-ease2');
+function safe(fn,label){ try{ fn(); }catch(e){ console.error('build '+label,e); } }
+safe(buildOverview,'overview');
+safe(()=>buildEase('EASE 1','page-ease1'),'ease1');
+safe(()=>buildEase('EASE 2','page-ease2'),'ease2');
 document.getElementById('page-overview').classList.add('active');
 </script>
 </body></html>
